@@ -8,12 +8,21 @@ import requests
 from scrapezillow import constants
 
 
+def _check_for_null_result(soup):
+    if not soup:
+        raise Exception(
+            "We were unable to parse crucial facts for this home. This "
+            "is probably because the HTML changed and we must update the "
+            "scraper. File a bug at https://github.com/hahnicity/scrapezillow/issues"
+        )
+
+
 def _get_sale_info(soup):
-    sale_info = {}
+    sale_info = {"price": None, "status": None, "zestimate": None}
     value_wrapper = soup.find("div", id=constants.HOME_VALUE)
     summary_rows = value_wrapper.find_all(class_=re.compile("home-summary-row"))
     for row in summary_rows:
-        pricing_re = "(Foreclosure Estimate|Below Zestimate|Rent Zestimate|Zestimate|Sold on|Sold)(?:\xae)?:?[\n ]+\$?([\d,\/\w]+)"
+        pricing_re = "(Foreclosure Estimate|Below Zestimate|Rent Zestimate|Zestimate|Sold on|Sold|Price cut)(?:\xae)?:?[\n ]+-?\$?([\d,\/\w]+)"
         pricing = re.findall(pricing_re, row.text)
         status = re.findall("(For Sale|Auction|Make Me Move|For Rent|Pre-Foreclosure|Off Market)", row.text)
         if pricing:
@@ -31,9 +40,11 @@ def _get_property_summary(soup):
         try:
             results[property_] = re.findall(regex, prop_summary)[0]
         except IndexError:
-            pass
+            results[property_] = None
 
-    prop_summary = soup.find("div", class_=constants.PROP_SUMMARY_CLASS).text
+    prop_summary = soup.find("header", class_=constants.PROP_SUMMARY_CLASS)
+    _check_for_null_result(prop_summary)
+    prop_summary = prop_summary.text
     results = {}
     parse_property(r"([\d\.]+) beds?", "bedrooms")
     parse_property(r"([\d\.]+) baths?", "bathrooms")
@@ -45,7 +56,9 @@ def _get_property_summary(soup):
 
 
 def _get_description(soup):
-    return soup.find("div", class_=constants.DESCRIPTION).text
+    description = soup.find("div", class_=constants.DESCRIPTION)
+    _check_for_null_result(description)
+    return description.text
 
 
 def _get_fact_list(soup):
