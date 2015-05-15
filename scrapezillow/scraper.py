@@ -117,7 +117,57 @@ def validate_scraper_input(url, zpid):
         )
     return url or urljoin(constants.ZILLOW_URL, "homedetails/{}_zpid".format(zpid))
 
+def _get_ajax_url(soup, label):
+    javascripts = soup.findAll("script",type="text/javascript")
+    for javascript in javascripts:
+        if javascript.string and javascript.string.find(label):
+            pattern = r'ajaxURL:"([\w\s/~&=\-\?\^\+\.]*)",jsModule:"' + label +'"'
+            url = re.search(pattern,'divId:"' + javascript.string)
+            if url:
+                full_url = "http://www.zillow.com" + url.group(1)
+    return full_url
 
+def _get_table_body(ajax_url, request_timeout):
+    html = get_raw_html(ajax_url, request_timeout)
+    pattern = r' { "html": "(.*)" }'
+    html = re.search(pattern, html).group(1)
+    html = re.sub(r'\\"',r'"',html) # Correct escaped quotes
+    html = re.sub(r'\\/',r'/',html) # Correct escaped forward slashes
+    soup = BeautifulSoup(html)
+    table = soup.find('table')
+    table_body = table.find('tbody')
+    return table_body
+    
+def _get_price_history(ajax_url, request_timeout):
+    table_body = _get_table_body(ajax_url, request_timeout)
+    data = []
+
+    rows = table_body.find_all('tr')
+    for row in rows:
+        cols = row.find_all('td')
+        cols = [ele for ele in cols]
+        date = cols[0].get_text()
+        event = cols[1].get_text()
+        price = cols[2].find('span').get_text()
+
+        data.append([date, event, price])
+    return data
+    
+def _get_tax_history(ajax_url, request_timeout):
+    table_body = _get_table_body(ajax_url, request_timeout)
+    data = []
+
+    rows = table_body.find_all('tr')
+    for row in rows:
+        cols = row.find_all('td')
+        cols = [ele for ele in cols]
+        date = cols[0].get_text()
+        tax = cols[1].contents[0]
+        assessment = cols[3].get_text()
+
+        data.append([date, tax, assessment])
+    return data
+    
 def scrape_url(url, zpid, request_timeout):
     """
     Scrape a specific zillow home. Takes either a url or a zpid. If both/neither are
@@ -130,4 +180,8 @@ def scrape_url(url, zpid, request_timeout):
     results.update(**facts)
     results.update(**_get_sale_info(soup))
     results["description"] = _get_description(soup)
+    ajax_url = _get_ajax_url(soup,"z-hdp-price-history")
+    results["price_history"] = _get_price_history(ajax_url, request_timeout)
+    tax_url = _get_ajax_url(soup,"z-expando-table")
+    results["tax_history"] = _get_tax_history(tax_url, request_timeout)
     return results
