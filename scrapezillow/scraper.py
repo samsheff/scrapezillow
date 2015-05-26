@@ -123,7 +123,6 @@ def _get_ajax_url(soup, label):
     ajax_url = None
     for javascript in javascripts:
         if javascript.string and javascript.string.find(label):
-            import pdb; pdb.set_trace()
             pattern = r'ajaxURL:"([\w\s/~&=\-\?\^\+\.]*)",jsModule:"' + label + '"'
             url = re.search(pattern, 'divId:"' + javascript.string)
             if url:
