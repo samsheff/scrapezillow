@@ -117,27 +117,32 @@ def validate_scraper_input(url, zpid):
         )
     return url or urljoin(constants.ZILLOW_URL, "homedetails/{}_zpid".format(zpid))
 
+
 def _get_ajax_url(soup, label):
-    javascripts = soup.findAll("script",type="text/javascript")
+    javascripts = soup.findAll("script", type="text/javascript")
+    ajax_url = None
     for javascript in javascripts:
         if javascript.string and javascript.string.find(label):
-            pattern = r'ajaxURL:"([\w\s/~&=\-\?\^\+\.]*)",jsModule:"' + label +'"'
-            url = re.search(pattern,'divId:"' + javascript.string)
+            import pdb; pdb.set_trace()
+            pattern = r'ajaxURL:"([\w\s/~&=\-\?\^\+\.]*)",jsModule:"' + label + '"'
+            url = re.search(pattern, 'divId:"' + javascript.string)
             if url:
-                full_url = "http://www.zillow.com" + url.group(1)
-    return full_url
+                ajax_url = "http://www.zillow.com" + url.group(1)
+    return ajax_url
+
 
 def _get_table_body(ajax_url, request_timeout):
     html = get_raw_html(ajax_url, request_timeout)
     pattern = r' { "html": "(.*)" }'
     html = re.search(pattern, html).group(1)
-    html = re.sub(r'\\"',r'"',html) # Correct escaped quotes
-    html = re.sub(r'\\/',r'/',html) # Correct escaped forward slashes
+    html = re.sub(r'\\"', r'"', html)  # Correct escaped quotes
+    html = re.sub(r'\\/', r'/', html)  # Correct escaped forward slashes
     soup = BeautifulSoup(html)
     table = soup.find('table')
     table_body = table.find('tbody')
     return table_body
-    
+
+
 def _get_price_history(ajax_url, request_timeout):
     table_body = _get_table_body(ajax_url, request_timeout)
     data = []
@@ -152,7 +157,8 @@ def _get_price_history(ajax_url, request_timeout):
 
         data.append([date, event, price])
     return data
-    
+
+
 def _get_tax_history(ajax_url, request_timeout):
     table_body = _get_table_body(ajax_url, request_timeout)
     data = []
@@ -167,7 +173,21 @@ def _get_tax_history(ajax_url, request_timeout):
 
         data.append([date, tax, assessment])
     return data
-    
+
+
+def populate_price_and_tax_histories(soup, results, request_timeout):
+    history_url = _get_ajax_url(soup, "z-hdp-price-history")
+    if not history_url:
+        results["price_history"] = []
+    else:
+        results["price_history"] = _get_price_history(history_url, request_timeout)
+    tax_url = _get_ajax_url(soup, "z-expando-table")
+    if not tax_url:
+        results["tax_history"] = []
+    else:
+        results["tax_history"] = _get_tax_history(tax_url, request_timeout)
+
+
 def scrape_url(url, zpid, request_timeout):
     """
     Scrape a specific zillow home. Takes either a url or a zpid. If both/neither are
@@ -180,8 +200,5 @@ def scrape_url(url, zpid, request_timeout):
     results.update(**facts)
     results.update(**_get_sale_info(soup))
     results["description"] = _get_description(soup)
-    ajax_url = _get_ajax_url(soup,"z-hdp-price-history")
-    results["price_history"] = _get_price_history(ajax_url, request_timeout)
-    tax_url = _get_ajax_url(soup,"z-expando-table")
-    results["tax_history"] = _get_tax_history(tax_url, request_timeout)
+    populate_price_and_tax_histories(soup, results, request_timeout)
     return results
