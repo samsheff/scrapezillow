@@ -8,8 +8,8 @@ import requests
 from scrapezillow import constants
 
 
-def _check_for_null_result(soup):
-    if not soup:
+def _check_for_null_result(result):
+    if not result:
         raise Exception(
             "We were unable to parse crucial facts for this home. This "
             "is probably because the HTML changed and we must update the "
@@ -119,14 +119,10 @@ def validate_scraper_input(url, zpid):
 
 
 def _get_ajax_url(soup, label):
-    javascripts = soup.findAll("script", type="text/javascript")
-    ajax_url = None
-    for javascript in javascripts:
-        if javascript.string and javascript.string.find(label):
-            pattern = r'ajaxURL:"([\w\s/~&=\-\?\^\+\.]*)",jsModule:"' + label + '"'
-            url = re.search(pattern, 'divId:"' + javascript.string)
-            if url:
-                ajax_url = "http://www.zillow.com" + url.group(1)
+    pattern = r"(\/AjaxRender.htm\?encparams=[\w\-_~=]+&rwebid=\d+&rhost=\d)\",jsModule:\"{}".format(label)
+    url = re.search(pattern, soup.text)
+    _check_for_null_result(url)
+    ajax_url = "http://www.zillow.com" + url.group(1)
     return ajax_url
 
 
@@ -176,15 +172,9 @@ def _get_tax_history(ajax_url, request_timeout):
 
 def populate_price_and_tax_histories(soup, results, request_timeout):
     history_url = _get_ajax_url(soup, "z-hdp-price-history")
-    if not history_url:
-        results["price_history"] = []
-    else:
-        results["price_history"] = _get_price_history(history_url, request_timeout)
+    results["price_history"] = _get_price_history(history_url, request_timeout)
     tax_url = _get_ajax_url(soup, "z-expando-table")
-    if not tax_url:
-        results["tax_history"] = []
-    else:
-        results["tax_history"] = _get_tax_history(tax_url, request_timeout)
+    results["tax_history"] = _get_tax_history(tax_url, request_timeout)
 
 
 def scrape_url(url, zpid, request_timeout):
