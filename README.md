@@ -36,4 +36,4 @@ If you'd like to look a home up by url
 
     results = scrape_url(<url>, None, <request timeout>)
 
-That should give you all the data you need. If not feel free to complain to me.
+That should give you all the data you need. If not feel free to request new features.
