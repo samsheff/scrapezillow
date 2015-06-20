@@ -134,6 +134,8 @@ def _get_table_body(ajax_url, request_timeout):
     html = re.sub(r'\\/', r'/', html)  # Correct escaped forward slashes
     soup = BeautifulSoup(html)
     table = soup.find('table')
+    if not table:  # It doesn't have a price/tax history
+        raise ValueError("There is no table history for url {}".format(ajax_url))
     table_body = table.find('tbody')
     return table_body
 
@@ -155,8 +157,11 @@ def _get_price_history(ajax_url, request_timeout):
 
 
 def _get_tax_history(ajax_url, request_timeout):
-    table_body = _get_table_body(ajax_url, request_timeout)
     data = []
+    try:
+        table_body = _get_table_body(ajax_url, request_timeout)
+    except ValueError:
+        return data
 
     rows = table_body.find_all('tr')
     for row in rows:
