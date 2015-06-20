@@ -15,7 +15,7 @@ zpid_1_expected = {
 def test_scrape_url():
     zpid = "2101920883"
     response = scrape_url(None, zpid, 5)
-    for k, v in zpid_1_expected.iteritems():
+    for k, v in zpid_1_expected.items():
         eq_(response[k], v)
     assert_greater(int(response['price'].replace(',', '')), 0)
     ok_(response['description'])

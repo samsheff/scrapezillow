@@ -1,8 +1,12 @@
 import re
-from urlparse import urljoin
+try:
+    from httplib import OK
+    from urlparse import urljoin
+except ImportError:  # Python3
+    from http.client import OK
+    from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
-from httplib import OK
 import requests
 
 from scrapezillow import constants
@@ -129,7 +133,7 @@ def _get_ajax_url(soup, label):
 def _get_table_body(ajax_url, request_timeout):
     html = get_raw_html(ajax_url, request_timeout)
     pattern = r' { "html": "(.*)" }'
-    html = re.search(pattern, html).group(1)
+    html = re.search(pattern, str(html)).group(1)
     html = re.sub(r'\\"', r'"', html)  # Correct escaped quotes
     html = re.sub(r'\\/', r'/', html)  # Correct escaped forward slashes
     soup = BeautifulSoup(html)
