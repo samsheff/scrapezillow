@@ -136,7 +136,7 @@ def _get_table_body(ajax_url, request_timeout):
     html = re.search(pattern, str(html)).group(1)
     html = re.sub(r'\\"', r'"', html)  # Correct escaped quotes
     html = re.sub(r'\\/', r'/', html)  # Correct escaped forward slashes
-    soup = BeautifulSoup(html)
+    soup = BeautifulSoup(html, 'html.parser')
     table = soup.find('table')
     if not table:  # It doesn't have a price/tax history
         raise ValueError("There is no table history for url {}".format(ajax_url))
@@ -192,7 +192,7 @@ def scrape_url(url, zpid, request_timeout):
     specified this function will throw an error.
     """
     url = validate_scraper_input(url, zpid)
-    soup = BeautifulSoup(get_raw_html(url, request_timeout))
+    soup = BeautifulSoup(get_raw_html(url, request_timeout), 'html.parser')
     results = _get_property_summary(soup)
     facts = _parse_facts(_get_fact_list(soup))
     results.update(**facts)
