@@ -11,6 +11,6 @@ HOME_TYPES = (
 )
 HOME_VALUE = "home-value-wrapper"
 INDIVIDUAL_FACT = "fact-bullet"
-PROP_SUMMARY_CLASS = "zsg-content-header addr"
+PROP_SUMMARY_CLASS = "hdp-content-wrapper zsg-content-section"
 ZILLOW_HOMES_URL = "http://zillow.com/homes/"
 ZILLOW_URL = "http://zillow.com"

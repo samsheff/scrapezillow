@@ -15,9 +15,9 @@ from scrapezillow import constants
 def _check_for_null_result(result):
     if not result:
         raise Exception(
-            "We were unable to parse crucial facts for this home. This "
-            "is probably because the HTML changed and we must update the "
-            "scraper. File a bug at https://github.com/hahnicity/scrapezillow/issues"
+            "We were unable to parse crucial facts for this home. Perhaps this is "
+            "not a valid listing or the html changed and we are unable to use the "
+            "scraper. If the latter, file a bug at https://github.com/hahnicity/scrapezillow/issues"
         )
 
 
@@ -46,7 +46,7 @@ def _get_property_summary(soup):
         except IndexError:
             results[property_] = None
 
-    prop_summary = soup.find("header", class_=constants.PROP_SUMMARY_CLASS)
+    prop_summary = soup.find("div", class_=constants.PROP_SUMMARY_CLASS)
     _check_for_null_result(prop_summary)
     prop_summary = prop_summary.text
     results = {}
@@ -122,16 +122,16 @@ def validate_scraper_input(url, zpid):
         raise ValueError("You cannot specify both a url and a zpid. Choode one or the other")
     elif not url and not zpid:
         raise ValueError("You must specify either a zpid or a url of the home to scrape")
-    if url and "homedetails" not in url:
+    if url and "homes" not in url:
         raise ValueError(
             "This program only supports gathering data for homes. Please Specify your url as "
-            "http://zillow.com/homedetails/<zpid>_zpid"
+            "http://zillow.com/homes/<zpid>_zpid/(index)/"
         )
-    return url or urljoin(constants.ZILLOW_URL, "homedetails/{}_zpid".format(zpid))
+    return url or urljoin(constants.ZILLOW_URL, "homes/{}_zpid/(index)/".format(zpid))
 
 
 def _get_ajax_url(soup, label):
-    pattern = r"(\/AjaxRender.htm\?encparams=[\w\-_~=]+&rwebid=\d+&rhost=\d)\",jsModule:\"{}".format(label)
+    pattern = r"(\/AjaxRender.htm\?encparams=[\w\-_~=]+&rwebid=\d+&rhost=\d)\",customEvent:\"CollapsibleModule:expandSection\",jsModule:\"{}".format(label)
     url = re.search(pattern, soup.text)
     _check_for_null_result(url)
     ajax_url = "http://www.zillow.com" + url.group(1)
@@ -162,7 +162,11 @@ def _get_price_history(ajax_url, request_timeout):
         cols = [ele for ele in cols]
         date = cols[0].get_text()
         event = cols[1].get_text()
-        price = cols[2].find('span').get_text()
+        price_span = cols[2].find('span')
+        if not price_span:
+            price = None
+        else:
+            price = price_span.get_text()
 
         data.append([date, event, price])
     return data
