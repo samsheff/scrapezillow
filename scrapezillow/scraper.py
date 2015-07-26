@@ -65,6 +65,14 @@ def _get_description(soup):
     return description.text
 
 
+def _get_photos(soup):
+    images = soup.select("ol.photos img")
+    if not images:
+        return []
+
+    photos = [i.get("href", i.get("src", None)) for i in images]
+    return filter(None, photos)
+
 def _get_fact_list(soup):
     groups = soup.find_all("ul", constants.FACT_GROUPING)
     facts = []
@@ -198,5 +206,6 @@ def scrape_url(url, zpid, request_timeout):
     results.update(**facts)
     results.update(**_get_sale_info(soup))
     results["description"] = _get_description(soup)
+    results["photos"] = _get_photos(soup)
     populate_price_and_tax_histories(soup, results, request_timeout)
     return results
