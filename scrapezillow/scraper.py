@@ -206,6 +206,7 @@ def scrape_url(url, zpid, request_timeout):
     url = validate_scraper_input(url, zpid)
     soup = BeautifulSoup(get_raw_html(url, request_timeout), 'html.parser')
     results = _get_property_summary(soup)
+    results["zpid"] = zpid
     facts = _parse_facts(_get_fact_list(soup))
     results.update(**facts)
     results.update(**_get_sale_info(soup))

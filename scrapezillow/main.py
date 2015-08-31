@@ -1,5 +1,6 @@
 from argparse import ArgumentParser
 from pprint import pprint
+import json
 
 from scrapezillow.scraper import scrape_url
 
@@ -11,4 +12,4 @@ def main():
     mutex.add_argument("--url")
     parser.add_argument("-t", "--request-timeout", type=int)
     args = parser.parse_args()
-    pprint(scrape_url(**args.__dict__))
+    pprint(json.dumps(scrape_url(**args.__dict__)))
